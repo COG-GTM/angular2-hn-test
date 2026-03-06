@@ -19,17 +19,23 @@ export function Feed({ feedType }: FeedProps) {
     const [listStart, setListStart] = useState(1);
 
     useEffect(() => {
+        let cancelled = false;
         setItems(null);
         setErrorMessage('');
         fetchFeed(feedType, pageNum)
             .then((data) => {
-                setItems(data);
-                setListStart((pageNum - 1) * 30 + 1);
-                window.scrollTo(0, 0);
+                if (!cancelled) {
+                    setItems(data);
+                    setListStart((pageNum - 1) * 30 + 1);
+                    window.scrollTo(0, 0);
+                }
             })
             .catch(() => {
-                setErrorMessage('Could not load ' + feedType + ' stories.');
+                if (!cancelled) {
+                    setErrorMessage('Could not load ' + feedType + ' stories.');
+                }
             });
+        return () => { cancelled = true; };
     }, [feedType, pageNum]);
 
     return (
