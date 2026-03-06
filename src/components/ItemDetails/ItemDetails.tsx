@@ -17,6 +17,8 @@ export function ItemDetails() {
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
+        setItem(null);
+        setErrorMessage('');
         if (id) {
             fetchItemContent(+id)
                 .then((data) => {
