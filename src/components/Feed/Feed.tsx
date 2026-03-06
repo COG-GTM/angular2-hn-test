@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Story } from '../../models/story';
+import { FeedName } from '../../models/feed-type';
 import { fetchFeed } from '../../services/hackerNewsApi';
 import { Item } from '../Item/Item';
 import { Loader } from '../Loader/Loader';
@@ -8,7 +9,7 @@ import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
 import './Feed.scss';
 
 interface FeedProps {
-    feedType: string;
+    feedType: FeedName;
 }
 
 export function Feed({ feedType }: FeedProps) {
