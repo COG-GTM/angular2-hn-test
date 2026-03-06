@@ -13,6 +13,8 @@ export function UserProfile() {
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
+        setUser(null);
+        setErrorMessage('');
         if (id) {
             fetchUser(id)
                 .then((data) => {
