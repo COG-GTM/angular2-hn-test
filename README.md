@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://angular2-hn.firebaseapp.com">
-    <img alt="Angular 2 HN" title="Angular 2 HN" src="http://i.imgur.com/J303pQ4.png" width="150">
+    <img alt="React HN" title="React HN" src="http://i.imgur.com/J303pQ4.png" width="150">
   </a>
 </p>
 
@@ -52,7 +52,7 @@ This app uses [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) (powered by W
 
 ## Manifest
 
-With Chromium based browsers for Android (Chrome, Opera, etc...), Angular 2 HN includes a Web App Manifest that allows you to install to your homescreen.
+With Chromium based browsers for Android (Chrome, Opera, etc...), React HN includes a Web App Manifest that allows you to install to your homescreen.
 
 <p align="center">
   <img src = "http://i.imgur.com/1RaaNkr.png">
@@ -74,7 +74,7 @@ More to come!
  - Realtime updating using the Firebase SDK (may need to add option to settings so service worker can still rely on REST endpoints)
  - Server side rendering
 
-Feel free to send me feedback on [twitter](https://twitter.com/hdjirdeh) or [file an issue](https://github.com/hdjirdeh/angular2-hn/issues/new)! Feature requests are always welcome.
+Feel free to send me feedback on [twitter](https://twitter.com/hdjirdeh) or file an issue! Feature requests are always welcome.
 
 ## Build process
 
