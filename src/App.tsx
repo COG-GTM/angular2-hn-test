@@ -4,6 +4,7 @@ import { useSettings } from './context/SettingsContext';
 import { Header } from './components/Header/Header';
 import { Footer } from './components/Footer/Footer';
 import { Feed } from './components/Feed/Feed';
+import { FeedMigrated } from './components/Feed/FeedMigrated';
 import { Loader } from './components/Loader/Loader';
 import './App.scss';
 
@@ -47,6 +48,12 @@ export function App() {
                 <Route path="/show/:page" element={<Feed feedType="show" />} />
                 <Route path="/ask/:page" element={<Feed feedType="ask" />} />
                 <Route path="/jobs/:page" element={<Feed feedType="jobs" />} />
+                {/* Test routes for migrated FeedComponent — renders FeedMigrated alongside original */}
+                <Route path="/migrated/news/:page" element={<FeedMigrated feedType="news" />} />
+                <Route path="/migrated/newest/:page" element={<FeedMigrated feedType="newest" />} />
+                <Route path="/migrated/show/:page" element={<FeedMigrated feedType="show" />} />
+                <Route path="/migrated/ask/:page" element={<FeedMigrated feedType="ask" />} />
+                <Route path="/migrated/jobs/:page" element={<FeedMigrated feedType="jobs" />} />
                 <Route path="/item/:id" element={<ItemDetails />} />
                 <Route path="/user/:id" element={<UserProfile />} />
             </Route>
