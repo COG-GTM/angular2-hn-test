@@ -123,13 +123,13 @@ export function FeedMigrated({ feedType }: FeedMigratedProps) {
                     <div className="nav">
                         {/* Replaces: <a *ngIf="listStart !== 1" [routerLink]="['/' + feedType, pageNum - 1]"> */}
                         {listStart !== 1 && (
-                            <Link to={`/${feedType}/${pageNum - 1}`} className="prev">
+                            <Link to={`/migrated/${feedType}/${pageNum - 1}`} className="prev">
                                 ‹ Prev
                             </Link>
                         )}
                         {/* Replaces: <a *ngIf="items.length === 30" [routerLink]="['/' + feedType, pageNum + 1]"> */}
                         {items.length === 30 && (
-                            <Link to={`/${feedType}/${pageNum + 1}`} className="more">
+                            <Link to={`/migrated/${feedType}/${pageNum + 1}`} className="more">
                                 More ›
                             </Link>
                         )}
