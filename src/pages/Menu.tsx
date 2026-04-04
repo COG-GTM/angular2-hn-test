@@ -66,7 +66,7 @@ const menuData: MenuCategory[] = [
                 description:
                     'Refreshing chicken broth brightened with yuzu zest. Served with shrimp tempura, watercress, and citrus oil.',
                 price: '$19',
-                image: 'https://images.unsplash.com/photo-1552611052-33e04de1b100?w=600&h=400&fit=crop',
+                image: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=600&h=400&fit=crop',
                 tag: 'New',
             },
             {
