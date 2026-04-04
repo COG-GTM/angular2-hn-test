@@ -1,0 +1,11 @@
+@keyframes petal-fall {
+  0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.7; }
+  100% { transform: translateY(100vh) translateX(80px) rotate(720deg); opacity: 0; }
+}
+
+.petal {
+  animation: petal-fall linear infinite;
+  pointer-events: none;
+}
