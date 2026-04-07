@@ -1,14 +1,77 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sakura Forecast — Cherry Blossom Predictions for Japan</title>
-    <script type="module" crossorigin src="/assets/index-pGfjD1Ki.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DDkdYftW.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yale Residential College Picker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎰</text></svg>" />
+</head>
+<body>
+  <div class="bg-pattern"></div>
+
+  <header>
+    <div class="yale-wordmark">YALE</div>
+    <h1>Residential College Picker</h1>
+    <p class="subtitle">Welcome, Class of 2030! Discover your new home at Yale.</p>
+  </header>
+
+  <main>
+    <div class="slot-machine">
+      <div class="slot-machine-frame">
+        <div class="slot-machine-header">
+          <div class="light light-1"></div>
+          <div class="light light-2"></div>
+          <div class="light light-3"></div>
+          <span>YOUR COLLEGE</span>
+          <div class="light light-4"></div>
+          <div class="light light-5"></div>
+          <div class="light light-6"></div>
+        </div>
+
+        <div class="reels-container">
+          <div class="reel-window">
+            <div class="reel" id="reel1"></div>
+          </div>
+          <div class="reel-window">
+            <div class="reel" id="reel2"></div>
+          </div>
+          <div class="reel-window">
+            <div class="reel" id="reel3"></div>
+          </div>
+          <div class="reel-highlight"></div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn" onclick="spin()">
+          <span class="spin-btn-text">FIND MY COLLEGE</span>
+          <span class="spin-btn-sub">Pull the lever!</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="result-content">
+        <h2 class="result-announce">You've been placed in...</h2>
+        <div class="result-crest" id="resultCrest"></div>
+        <h2 class="result-name" id="resultName"></h2>
+        <p class="result-motto" id="resultMotto"></p>
+        <p class="result-desc" id="resultDesc"></p>
+        <div class="result-details" id="resultDetails"></div>
+        <button class="spin-again-btn" onclick="reset()">Try Again</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Yale Office of Undergraduate Admissions &bull; New Haven, CT</p>
+    <p class="disclaimer">This is for demonstration purposes only. Actual college assignments are made by the Yale residential college system.</p>
+  </footer>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <script src="app.js"></script>
+</body>
 </html>
