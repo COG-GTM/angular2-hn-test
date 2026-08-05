@@ -83,6 +83,8 @@ Feel free to send me feedback on [twitter](https://twitter.com/hdjirdeh) or [fil
  - `npm run dev` to run the application with Vite dev server
  - `npm run build` to kick off a production build (output in `dist/`)
  - `npm run preview` to preview the production build locally
+ - `npm test` to run the unit tests (Vitest + Testing Library), `npm run test:watch` for watch mode
+ - `npm run lint` to lint the project
 
 ## Contributors
 
