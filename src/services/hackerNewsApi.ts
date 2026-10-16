@@ -3,6 +3,8 @@ import { Story } from '../models/story';
 import { User } from '../models/user';
 import { PollResult } from '../models/poll-result';
 import { FeedName } from '../models/feed-type';
+import { Comment } from '../models/comment';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 export const baseUrl = 'https://node-hnapi.herokuapp.com';
 // node-hnapi returns 404 for every /user/* request; HNPWA serves the same User shape.
@@ -44,8 +46,19 @@ export function fetchFeed(feedType: FeedName, page: number): Promise<Story[]> {
     return fetchJson<Story[]>(`${baseUrl}/${feedType}?page=${page}`);
 }
 
+// HN `content`/`about` fields are rendered with dangerouslySetInnerHTML, so they are
+// sanitized here once rather than relying on every view to remember.
+function sanitizeComments(comments: Comment[] | undefined): Comment[] {
+    return (comments ?? []).map((c) => ({
+        ...c,
+        content: sanitizeHtml(c.content),
+        comments: sanitizeComments(c.comments),
+    }));
+}
+
 export async function fetchItemContent(id: number): Promise<Story> {
-    const story = await fetchJson<Story>(`${baseUrl}/item/${id}`);
+    const raw = await fetchJson<Story>(`${baseUrl}/item/${id}`);
+    const story: Story = { ...raw, content: sanitizeHtml(raw.content), comments: sanitizeComments(raw.comments) };
     if (story.type === 'poll' && Array.isArray(story.poll)) {
         const pollResults = await Promise.all(story.poll.map((_, i) => fetchPollContent(story.id + i + 1)));
         story.poll = pollResults;
@@ -54,10 +67,12 @@ export async function fetchItemContent(id: number): Promise<Story> {
     return story;
 }
 
-export function fetchPollContent(id: number): Promise<PollResult> {
-    return fetchJson<PollResult>(`${baseUrl}/item/${id}`);
+export async function fetchPollContent(id: number): Promise<PollResult> {
+    const result = await fetchJson<PollResult>(`${baseUrl}/item/${id}`);
+    return { ...result, content: sanitizeHtml(result.content) };
 }
 
-export function fetchUser(id: string): Promise<User> {
-    return fetchJson<User>(`${userBaseUrl}/user/${encodeURIComponent(id)}.json`);
+export async function fetchUser(id: string): Promise<User> {
+    const user = await fetchJson<User>(`${userBaseUrl}/user/${encodeURIComponent(id)}.json`);
+    return user.about === undefined ? user : { ...user, about: sanitizeHtml(user.about) };
 }

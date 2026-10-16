@@ -14,6 +14,12 @@ describe('sanitizeHtml', () => {
         expect(out).toBe('<a>t</a>');
     });
 
+    it('drops protocol-relative hrefs but keeps local paths', () => {
+        expect(
+            sanitizeHtml('<a href="//evil.example">a</a><a href="/\\evil.example">b</a><a href="/item/1">c</a>')
+        ).toBe('<a>a</a><a>b</a><a href="/item/1">c</a>');
+    });
+
     it('unwraps unknown tags but keeps their text', () => {
         expect(sanitizeHtml('<div><font>hello</font></div>')).toBe('hello');
     });

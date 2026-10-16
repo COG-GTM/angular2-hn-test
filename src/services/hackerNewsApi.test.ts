@@ -21,20 +21,73 @@ describe('hackerNewsApi', () => {
         mockFetch(() => ({ body: null }));
         await expect(fetchUser('nobody')).rejects.toThrow(/no data/);
 
-        vi.stubGlobal('fetch', vi.fn(async () => new Response("Cannot read property 'apply' of undefined")));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => new Response("Cannot read property 'apply' of undefined"))
+        );
         await expect(fetchUser('nobody')).rejects.toThrow(/invalid JSON/);
     });
 
     it('fetchUser uses HNPWA and encodes the id', async () => {
         const fetchMock = mockFetch((url) =>
-            url === 'https://api.hnpwa.com/v0/user/a%2Fb.json' ? { body: { id: 'a/b', karma: 1, created: 'x' } } : undefined
+            url === 'https://api.hnpwa.com/v0/user/a%2Fb.json'
+                ? { body: { id: 'a/b', karma: 1, created: 'x' } }
+                : undefined
         );
         await expect(fetchUser('a/b')).resolves.toMatchObject({ id: 'a/b' });
         expect(fetchMock).toHaveBeenCalledWith('https://api.hnpwa.com/v0/user/a%2Fb.json', undefined);
     });
 
+    it('sanitizes item, comment, poll and user HTML', async () => {
+        const xss = '<p>hi</p><img src=x onerror="alert(1)">';
+        const story = makeStory({
+            id: 20,
+            content: xss,
+            comments: [
+                {
+                    id: 21,
+                    level: 0,
+                    user: 'u',
+                    time: 0,
+                    time_ago: '',
+                    content: xss,
+                    deleted: false,
+                    comments: [
+                        {
+                            id: 22,
+                            level: 1,
+                            user: 'u',
+                            time: 0,
+                            time_ago: '',
+                            content: xss,
+                            deleted: false,
+                            comments: [],
+                        },
+                    ],
+                },
+            ],
+        });
+        mockFetch((url) => {
+            if (url.endsWith('/item/20')) return { body: story };
+            if (url.includes('/user/')) return { body: { id: 'u', karma: 1, created: 'x', about: xss } };
+            return undefined;
+        });
+        const item = await fetchItemContent(20);
+        expect(item.content).toBe('<p>hi</p>');
+        expect(item.comments[0].content).toBe('<p>hi</p>');
+        expect(item.comments[0].comments[0].content).toBe('<p>hi</p>');
+        await expect(fetchUser('u')).resolves.toMatchObject({ about: '<p>hi</p>' });
+    });
+
     it('fetchItemContent resolves poll options before returning', async () => {
-        const poll = makeStory({ id: 10, type: 'poll', poll: [{ points: 0, content: '' }, { points: 0, content: '' }] });
+        const poll = makeStory({
+            id: 10,
+            type: 'poll',
+            poll: [
+                { points: 0, content: '' },
+                { points: 0, content: '' },
+            ],
+        });
         mockFetch((url) => {
             if (url.endsWith('/item/10')) return { body: poll };
             if (url.endsWith('/item/11')) return { body: { points: 3, content: 'Yes' } };

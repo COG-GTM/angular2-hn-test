@@ -15,6 +15,8 @@ describe('story utils', () => {
         expect(parsePositiveInt('abc')).toBeNull();
         expect(parsePositiveInt('1.5')).toBeNull();
         expect(parsePositiveInt(undefined)).toBeNull();
+        expect(parsePositiveInt('9007199254740993')).toBeNull();
+        expect(parsePositiveInt('9'.repeat(400))).toBeNull();
     });
 
     it('formatCommentCount matches the Angular comment pipe', () => {
