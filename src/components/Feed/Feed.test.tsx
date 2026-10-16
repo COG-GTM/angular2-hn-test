@@ -141,4 +141,14 @@ describe('Feed', () => {
         expect(screen.queryByText('Story 31')).not.toBeInTheDocument();
         expect(document.querySelector('ol')).toHaveAttribute('start', '61');
     });
+
+    it('turns off native history scroll restoration while mounted and restores it on unmount', async () => {
+        mockFetch((url) => (url === `${API}/news?page=1` ? { body: makeFeed(30) } : undefined));
+        window.history.scrollRestoration = 'auto';
+        const { unmount } = renderFeed('/news/1');
+        expect(window.history.scrollRestoration).toBe('manual');
+        expect(await screen.findAllByText('Story 1')).not.toHaveLength(0);
+        unmount();
+        expect(window.history.scrollRestoration).toBe('auto');
+    });
 });

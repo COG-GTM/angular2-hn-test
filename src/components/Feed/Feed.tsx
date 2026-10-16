@@ -24,6 +24,18 @@ export function Feed({ feedType }: FeedProps) {
     );
     const listStart = ((pageNum ?? 1) - 1) * FEED_PAGE_SIZE + 1;
 
+    // Native history scroll restoration would put Back/Forward at the old offset while the loader
+    // shows; the feed always scrolls to the top itself, so turn it off while the feed is mounted.
+    useEffect(() => {
+        const { history } = window;
+        if (!('scrollRestoration' in history)) return;
+        const previous = history.scrollRestoration;
+        history.scrollRestoration = 'manual';
+        return () => {
+            history.scrollRestoration = previous;
+        };
+    }, []);
+
     // Angular scrolled to the top once the page loaded; also do it when the page changes so the
     // loader is visible instead of a blank screen when More/Back is used from the bottom.
     useEffect(() => {
