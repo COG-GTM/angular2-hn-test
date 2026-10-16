@@ -1,8 +1,10 @@
 export interface User {
     id: string;
-    crated_time: number;
+    /** Misspelled field kept from the Angular model; HNPWA sends `created_time`. */
+    crated_time?: number;
+    created_time?: number;
     created: string;
     karma: number;
-    avg: number;
-    about: string;
+    avg?: number;
+    about?: string;
 }

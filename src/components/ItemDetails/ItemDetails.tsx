@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Story } from '../../models/story';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../context/useSettings';
 import { fetchItemContent } from '../../services/hackerNewsApi';
 import { formatCommentCount } from '../../utils/formatCommentCount';
 import { CommentItem } from '../Comment/Comment';

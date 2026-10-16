@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Story } from '../../models/story';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../context/useSettings';
 import { formatCommentCount } from '../../utils/formatCommentCount';
 import './Item.scss';
 

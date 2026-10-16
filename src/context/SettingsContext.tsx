@@ -1,22 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { Settings } from '../models/settings';
-
-interface SettingsContextType {
-    settings: Settings;
-    toggleSettings: () => void;
-    toggleOpenLinksInNewTab: () => void;
-    setTheme: (theme: string) => void;
-    setFont: (fontSize: string) => void;
-    setSpacing: (listSpace: string) => void;
-}
-
-const SettingsContext = createContext<SettingsContextType | null>(null);
-
-export function useSettings(): SettingsContextType {
-    const ctx = useContext(SettingsContext);
-    if (!ctx) throw new Error('useSettings must be used within a SettingsProvider');
-    return ctx;
-}
+import { SettingsContext } from './useSettings';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<Settings>(() => ({
