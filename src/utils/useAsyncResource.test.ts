@@ -26,6 +26,23 @@ describe('useAsyncResource', () => {
         await waitFor(() => expect(result.current.data).toBe('B'));
     });
 
+    it('finishes loading for falsy results', async () => {
+        const { result } = renderHook(() => useAsyncResource('zero', () => Promise.resolve(0)));
+        await waitFor(() => expect(result.current).toEqual({ data: 0, error: false, loading: false }));
+    });
+
+    it('starts the request when a loader appears for the same key', async () => {
+        const { result, rerender } = renderHook(
+            ({ ready }) => useAsyncResource('k', ready ? () => Promise.resolve('ok') : null),
+            {
+                initialProps: { ready: false },
+            }
+        );
+        expect(result.current.error).toBe(true);
+        rerender({ ready: true });
+        await waitFor(() => expect(result.current).toEqual({ data: 'ok', error: false, loading: false }));
+    });
+
     it('returns the error state for a null loader or a rejection', async () => {
         const { result: invalid } = renderHook(() => useAsyncResource('x', null));
         expect(invalid.current).toEqual({ data: null, error: true, loading: false });
