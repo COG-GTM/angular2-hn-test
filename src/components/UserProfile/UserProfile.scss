@@ -10,6 +10,12 @@
     white-space: pre-wrap;
   }
 
+  // Undo unscoped global rules from other components (Item/ItemDetails `p`, Header `.name`)
+  // so paragraphs keep the browser-default spacing Angular rendered.
+  p {
+    margin: 1em 0;
+  }
+
   @media #{$mobile-only} {
     padding: 110px 15px 0 15px;
 
@@ -53,6 +59,8 @@
 
   .main-details {
     .name {
+      display: inline;
+      margin: 0;
       font-weight: bold;
       font-size: 32px;
       letter-spacing: 2px;
