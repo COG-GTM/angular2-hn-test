@@ -19,8 +19,17 @@ export interface AsyncResource<T> {
  * responses from abandoned keys are ignored. Pass `load = null` for an invalid param to
  * get the error state instead of a loader that never resolves.
  */
+const IDLE: ResourceState<never> = { key: '', data: null, error: false, done: false };
+
 export function useAsyncResource<T>(key: string, load: (() => Promise<T>) | null): AsyncResource<T> {
-    const [state, setState] = useState<ResourceState<T>>({ key: '', data: null, error: false, done: false });
+    const [state, setState] = useState<ResourceState<T>>(IDLE);
+    // Drop the settled result synchronously on every key change, so a key that comes back
+    // (A -> B -> Back to A) shows the loader until its fresh request settles.
+    const [activeKey, setActiveKey] = useState(key);
+    if (activeKey !== key) {
+        setActiveKey(key);
+        setState(IDLE);
+    }
 
     useEffect(() => {
         if (!load) return;

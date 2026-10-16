@@ -26,6 +26,22 @@ describe('useAsyncResource', () => {
         await waitFor(() => expect(result.current.data).toBe('B'));
     });
 
+    it('shows the loader when a previous key returns before its fresh request settles', async () => {
+        const pending = deferred<string>();
+        let calls = 0;
+        const { result, rerender } = renderHook(
+            ({ k }) =>
+                useAsyncResource(k, () => (k === 'a' && calls++ === 0 ? Promise.resolve('A1') : pending.promise)),
+            { initialProps: { k: 'a' } }
+        );
+        await waitFor(() => expect(result.current.data).toBe('A1'));
+        rerender({ k: 'b' });
+        rerender({ k: 'a' });
+        expect(result.current).toEqual({ data: null, error: false, loading: true });
+        await act(async () => pending.resolve('A2'));
+        await waitFor(() => expect(result.current.data).toBe('A2'));
+    });
+
     it('finishes loading for falsy results', async () => {
         const { result } = renderHook(() => useAsyncResource('zero', () => Promise.resolve(0)));
         await waitFor(() => expect(result.current).toEqual({ data: 0, error: false, loading: false }));
