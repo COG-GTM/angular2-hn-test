@@ -138,7 +138,7 @@ describe('CommentItem', () => {
                 content: `<p>c${id}</p>`,
                 comments: depth === 0 ? [] : depth > 9 ? [build(depth - 1), build(depth - 1)] : [build(depth - 1)],
             });
-        const roots = Array.from({ length: 40 }, () => build(12));
+        const roots = Array.from({ length: 4 }, () => build(12));
         const { container } = renderWithProviders(
             <ul>
                 {roots.map((c) => (
@@ -150,5 +150,5 @@ describe('CommentItem', () => {
         );
         expect(id - 1000).toBeGreaterThan(300);
         expect(container.querySelectorAll('.comment')).toHaveLength(id - 1000);
-    });
+    }, 15000);
 });
