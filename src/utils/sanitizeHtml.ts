@@ -1,6 +1,8 @@
 const ALLOWED_TAGS = new Set(['A', 'P', 'I', 'EM', 'B', 'STRONG', 'PRE', 'CODE', 'BR', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'SPAN']);
-const ALLOWED_ATTRIBUTES: Record<string, string[]> = { A: ['href', 'rel', 'title'] };
-const SAFE_URL = /^(https?:|mailto:|\/|#)/i;
+const ALLOWED_ATTRIBUTES: Record<string, string[]> = { A: ['href', 'title'] };
+// Absolute http(s)/mailto, same-origin paths and fragments. `//host` and `/\host` resolve off-site, so they are rejected.
+const SAFE_URL = /^(https?:|mailto:|\/(?![/\\])|#)/i;
+const LINK_REL = 'nofollow noopener noreferrer';
 
 function cleanNode(node: Node, doc: Document): Node | null {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -29,6 +31,9 @@ function cleanNode(node: Node, doc: Document): Node | null {
         if (value === null) continue;
         if (name === 'href' && !SAFE_URL.test(value.trim())) continue;
         clean.setAttribute(name, value);
+    }
+    if (clean.tagName === 'A' && clean.hasAttribute('href')) {
+        clean.setAttribute('rel', LINK_REL);
     }
     children.forEach((child) => clean.appendChild(child));
     return clean;
