@@ -76,6 +76,7 @@ test('first visit: app shell, deep links and visited API responses work offline'
 
     // Pages never visited online have nothing cached and show the error state instead of hanging.
     await page.goto('/newest/1');
+    await expect(page.locator('.error-section')).toBeVisible();
     await expect(page.getByText(`${story.title} (newest)`)).toHaveCount(0);
 
     // Route params containing a dot are app routes, not static files: they still get the app shell.
@@ -115,24 +116,47 @@ test('serves a single installable web app manifest', async ({ page }) => {
     }
 });
 
-test('ngsw-worker.js retires a previously installed Angular service worker', async ({ context, page }) => {
+// Stand-in for @angular/service-worker: it controls the tab and keeps serving the cached Angular
+// shell for every navigation, so the React index.html (and /sw.js) never load on their own.
+const LEGACY_ANGULAR_WORKER = `
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil((async () => {
+    await (await caches.open('ngsw:/:db:control')).put('/x', new Response('x'));
+    await self.clients.claim();
+})()));
+self.addEventListener('fetch', (event) => {
+    if (event.request.mode === 'navigate') {
+        event.respondWith(new Response('<!doctype html><title>legacy</title><p>angular shell</p>',
+            { headers: { 'content-type': 'text/html' } }));
+    }
+});`;
+
+test('ngsw-worker.js retires an Angular service worker that still controls the tab', async ({ context, page }) => {
     await mockApi(context);
-    await page.goto('/');
-    await waitForServiceWorkerControl(page);
-
-    // Simulate a returning Angular visitor: ngsw caches plus a registration for /ngsw-worker.js.
-    // The safety worker reloads the page once it has cleaned up.
-    const reloaded = page.waitForEvent('load');
+    await context.route('**/ngsw-worker.js', (route) =>
+        route.fulfill({ contentType: 'text/javascript', body: LEGACY_ANGULAR_WORKER })
+    );
+    // Register from a non-app page so the React app never runs before the legacy worker.
+    await context.route('**/angular-era.html', (route) => route.fulfill({ contentType: 'text/html', body: '' }));
+    await page.goto('/angular-era.html');
     await page.evaluate(async () => {
-        await (await caches.open('ngsw:/:db:control')).put('/x', new Response('x'));
-        void navigator.serviceWorker.register('/ngsw-worker.js');
+        await navigator.serviceWorker.register('/ngsw-worker.js');
+        await navigator.serviceWorker.ready;
     });
-    await reloaded;
+    await page.goto('/news/1');
+    await expect(page.getByText('angular shell')).toBeVisible();
 
+    // After the deploy, the Angular worker's update check fetches the safety worker from the server.
+    // It deletes the ngsw caches, unregisters itself and reloads the tab into the React app.
+    await context.unroute('**/ngsw-worker.js');
+    await page.evaluate(async () => {
+        await (await navigator.serviceWorker.getRegistration())!.update();
+    });
+
+    await expect(visibleTitle(page, `${story.title} (news)`)).toBeVisible({ timeout: 15_000 });
     await expect
         .poll(() => page.evaluate(async () => (await caches.keys()).filter((key) => key.startsWith('ngsw:'))))
         .toEqual([]);
-    // The reloaded page registers the React SW again.
     await expect
         .poll(() =>
             page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.active?.scriptURL ?? '')
