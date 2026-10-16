@@ -2,39 +2,47 @@ import fetch from 'unfetch';
 import { Story } from '../models/story';
 import { User } from '../models/user';
 import { PollResult } from '../models/poll-result';
+import { FeedName } from '../models/feed-type';
 
-const baseUrl = 'https://node-hnapi.herokuapp.com';
+export const baseUrl = 'https://node-hnapi.herokuapp.com';
+// node-hnapi no longer serves /user/*; HNPWA returns the same user shape.
+export const userFallbackUrl = 'https://api.hnpwa.com/v0';
 
-export async function fetchFeed(feedType: string, page: number): Promise<Story[]> {
-    const res = await fetch(`${baseUrl}/${feedType}?page=${page}`);
-    return res.json();
+async function fetchJson<T>(url: string): Promise<T> {
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Request to ${url} failed with status ${res.status}`);
+    }
+    const data = (await res.json()) as T | null;
+    if (data === null || data === undefined) {
+        throw new Error(`Request to ${url} returned no data`);
+    }
+    return data;
+}
+
+export function fetchFeed(feedType: FeedName, page: number): Promise<Story[]> {
+    return fetchJson<Story[]>(`${baseUrl}/${feedType}?page=${page}`);
 }
 
 export async function fetchItemContent(id: number): Promise<Story> {
-    const res = await fetch(`${baseUrl}/item/${id}`);
-    const story: Story = await res.json();
-    if (story.type === 'poll') {
-        const numberOfPollOptions = story.poll.length;
-        story.poll_votes_count = 0;
-        const pollPromises = [];
-        for (let i = 1; i <= numberOfPollOptions; i++) {
-            pollPromises.push(fetchPollContent(story.id + i));
-        }
-        const pollResults = await Promise.all(pollPromises);
-        for (let i = 0; i < pollResults.length; i++) {
-            story.poll[i] = pollResults[i];
-            story.poll_votes_count += pollResults[i].points;
-        }
+    const story = await fetchJson<Story>(`${baseUrl}/item/${id}`);
+    if (story.type === 'poll' && Array.isArray(story.poll)) {
+        const pollResults = await Promise.all(story.poll.map((_, i) => fetchPollContent(story.id + i + 1)));
+        story.poll = pollResults;
+        story.poll_votes_count = pollResults.reduce((total, result) => total + result.points, 0);
     }
     return story;
 }
 
-export async function fetchPollContent(id: number): Promise<PollResult> {
-    const res = await fetch(`${baseUrl}/item/${id}`);
-    return res.json();
+export function fetchPollContent(id: number): Promise<PollResult> {
+    return fetchJson<PollResult>(`${baseUrl}/item/${id}`);
 }
 
 export async function fetchUser(id: string): Promise<User> {
-    const res = await fetch(`${baseUrl}/user/${id}`);
-    return res.json();
+    const encodedId = encodeURIComponent(id);
+    try {
+        return await fetchJson<User>(`${baseUrl}/user/${encodedId}`);
+    } catch {
+        return fetchJson<User>(`${userFallbackUrl}/user/${encodedId}.json`);
+    }
 }

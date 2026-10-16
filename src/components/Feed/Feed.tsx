@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Story } from '../../models/story';
 import { FeedName } from '../../models/feed-type';
 import { fetchFeed } from '../../services/hackerNewsApi';
+import { useAsyncResource } from '../../utils/useAsyncResource';
 import { Item } from '../Item/Item';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
@@ -12,44 +12,33 @@ interface FeedProps {
     feedType: FeedName;
 }
 
+const PAGE_SIZE = 30;
+
 export function Feed({ feedType }: FeedProps) {
     const { page } = useParams<{ page: string }>();
-    const pageNum = page ? +page : 1;
-    const [items, setItems] = useState<Story[] | null>(null);
-    const [errorMessage, setErrorMessage] = useState('');
-    const [listStart, setListStart] = useState(1);
+    const pageNum = page ? Number(page) : 1;
+    const validPage = Number.isInteger(pageNum) && pageNum >= 1;
+    const { data: items, error } = useAsyncResource(
+        `${feedType}/${pageNum}`,
+        validPage ? () => fetchFeed(feedType, pageNum) : null
+    );
+    const listStart = (pageNum - 1) * PAGE_SIZE + 1;
 
     useEffect(() => {
-        let cancelled = false;
-        setItems(null);
-        setErrorMessage('');
-        fetchFeed(feedType, pageNum)
-            .then((data) => {
-                if (!cancelled) {
-                    setItems(data);
-                    setListStart((pageNum - 1) * 30 + 1);
-                    window.scrollTo(0, 0);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setErrorMessage('Could not load ' + feedType + ' stories.');
-                }
-            });
-        return () => { cancelled = true; };
-    }, [feedType, pageNum]);
+        if (items) window.scrollTo(0, 0);
+    }, [items]);
 
     return (
-        <div className="main-content">
-            {!items && !errorMessage && <Loader />}
-            {!items && errorMessage !== '' && <ErrorMessage message={errorMessage} />}
+        <div className="main-content feed">
+            {!items && !error && <Loader />}
+            {!items && error && <ErrorMessage message={`Could not load ${feedType} stories.`} />}
 
             {items && (
                 <div>
                     {feedType === 'jobs' && (
                         <p className="job-header">
-                            These are jobs at startups that were funded by Y Combinator.
-                            You can also get a job at a YC startup through <a href="https://triplebyte.com/?ref=yc_jobs">Triplebyte</a>.
+                            These are jobs at startups that were funded by Y Combinator. You can also get a job at a
+                            YC startup through <a href="https://triplebyte.com/?ref=yc_jobs">Triplebyte</a>.
                         </p>
                     )}
                     <ol className={feedType !== 'jobs' ? 'list-margin' : undefined} start={listStart}>
@@ -65,7 +54,7 @@ export function Feed({ feedType }: FeedProps) {
                                 ‹ Prev
                             </Link>
                         )}
-                        {items.length === 30 && (
+                        {items.length === PAGE_SIZE && (
                             <Link to={`/${feedType}/${pageNum + 1}`} className="more">
                                 More ›
                             </Link>

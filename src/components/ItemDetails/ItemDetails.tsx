@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Story } from '../../models/story';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../context/useSettings';
 import { fetchItemContent } from '../../services/hackerNewsApi';
 import { formatCommentCount } from '../../utils/formatCommentCount';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
+import { hasExternalUrl, pollBarWidth } from '../../utils/story';
+import { useAsyncResource } from '../../utils/useAsyncResource';
+import { buttonProps } from '../../utils/a11y';
 import { CommentItem } from '../Comment/Comment';
 import { Loader } from '../Loader/Loader';
 import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
@@ -13,53 +16,35 @@ export function ItemDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { settings } = useSettings();
-    const [item, setItem] = useState<Story | null>(null);
-    const [errorMessage, setErrorMessage] = useState('');
+    const itemId = Number(id);
+    const validId = Number.isInteger(itemId) && itemId > 0;
+    const { data: item, error } = useAsyncResource(
+        `item/${id}`,
+        validId ? () => fetchItemContent(itemId) : null
+    );
 
     useEffect(() => {
-        let cancelled = false;
-        setItem(null);
-        setErrorMessage('');
-        if (id) {
-            fetchItemContent(+id)
-                .then((data) => {
-                    if (!cancelled) {
-                        setItem(data);
-                    }
-                })
-                .catch(() => {
-                    if (!cancelled) {
-                        setErrorMessage('Could not load item comments.');
-                    }
-                });
-        }
         window.scrollTo(0, 0);
-        return () => { cancelled = true; };
     }, [id]);
 
-    const goBack = () => {
-        navigate(-1);
+    const linkTarget = {
+        target: settings.openLinkInNewTab ? '_blank' : undefined,
+        rel: settings.openLinkInNewTab ? 'noopener' : undefined,
     };
-
-    const hasUrl = item ? item.url && item.url.indexOf('http') === 0 : false;
+    const hasUrl = item ? hasExternalUrl(item) : false;
 
     return (
-        <div className="main-content">
-            {!item && !errorMessage && <Loader />}
-            {!item && errorMessage !== '' && <ErrorMessage message={errorMessage} />}
+        <div className="main-content item-details-view">
+            {!item && !error && <Loader />}
+            {!item && error && <ErrorMessage message="Could not load item comments." />}
 
             {item && (
                 <div className="item">
                     <div className="mobile item-header">
                         <p className="title-block">
-                            <span className="back-button" onClick={goBack}></span>
+                            <span className="back-button" {...buttonProps(() => navigate(-1), 'Go back')}></span>
                             {hasUrl ? (
-                                <a
-                                    className="title"
-                                    href={item.url}
-                                    target={settings.openLinkInNewTab ? '_blank' : undefined}
-                                    rel={settings.openLinkInNewTab ? 'noopener' : undefined}
-                                >
+                                <a className="title" href={item.url} {...linkTarget}>
                                     {item.title}
                                 </a>
                             ) : (
@@ -70,18 +55,19 @@ export function ItemDetails() {
                         </p>
                     </div>
                     <div
-                        className={`laptop${item.comments_count > 0 || item.type === 'job' ? ' item-header' : ''}${item.text ? ' head-margin' : ''}`}
+                        className={[
+                            'laptop',
+                            item.comments_count > 0 || item.type === 'job' ? 'item-header' : '',
+                            item.text ? 'head-margin' : '',
+                        ]
+                            .filter(Boolean)
+                            .join(' ')}
                     >
                         {hasUrl ? (
                             <p>
-                                <a
-                                    className="title"
-                                    href={item.url}
-                                    target={settings.openLinkInNewTab ? '_blank' : undefined}
-                                    rel={settings.openLinkInNewTab ? 'noopener' : undefined}
-                                >
+                                <a className="title" href={item.url} {...linkTarget}>
                                     {item.title}
-                                </a>
+                                </a>{' '}
                                 {item.domain && <span className="domain">({item.domain})</span>}
                             </p>
                         ) : (
@@ -94,18 +80,16 @@ export function ItemDetails() {
                         <div className="subtext">
                             {item.type !== 'job' && (
                                 <span>
-                                    {item.points} points by{' '}
-                                    <Link to={`/user/${item.user}`}>{item.user}</Link>
+                                    {item.points} points by <Link to={`/user/${item.user}`}>{item.user}</Link>{' '}
                                 </span>
                             )}
                             <span className={item.type !== 'job' ? 'item-details' : undefined}>
                                 {item.time_ago}
                                 {item.type !== 'job' && (
                                     <span>
-                                        {' '}|{' '}
-                                        <Link to={`/item/${item.id}`}>
-                                            {formatCommentCount(item.comments_count)}
-                                        </Link>
+                                        {' '}
+                                        |{' '}
+                                        <Link to={`/item/${item.id}`}>{formatCommentCount(item.comments_count)}</Link>
                                     </span>
                                 )}
                             </span>
@@ -115,32 +99,23 @@ export function ItemDetails() {
                         <div className="pollResults">
                             {item.poll.map((pollResult, index) => (
                                 <div key={index} className="pollContent">
-                                    <div dangerouslySetInnerHTML={{ __html: pollResult.content }} />
+                                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(pollResult.content) }} />
                                     <div className="subtext">{pollResult.points} points</div>
                                     <div
                                         className="pollBar"
-                                        style={{
-                                            width:
-                                                (pollResult.points / item.poll_votes_count) * 100 + '%',
-                                        }}
+                                        style={{ width: pollBarWidth(pollResult.points, item.poll_votes_count) }}
                                     ></div>
                                 </div>
                             ))}
                         </div>
                     )}
-                    {item.content && (
-                        <p
-                            className="subject"
-                            dangerouslySetInnerHTML={{ __html: item.content }}
-                        />
-                    )}
+                    <p className="subject" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content) }} />
                     <ul className="comment-list">
-                        {item.comments &&
-                            item.comments.map((comment) => (
-                                <li key={comment.id}>
-                                    <CommentItem comment={comment} />
-                                </li>
-                            ))}
+                        {item.comments?.map((comment) => (
+                            <li key={comment.id}>
+                                <CommentItem comment={comment} />
+                            </li>
+                        ))}
                     </ul>
                 </div>
             )}
