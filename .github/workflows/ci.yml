@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: Playwright (routes, offline / PWA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: node_modules/.cache/playwright
+          retention-days: 7
+
+  # Replaces .travis.yml from the Angular app: deploy master to Firebase Hosting.
+  deploy:
+    name: Deploy to Firebase Hosting
+    needs: [check, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for Firebase credentials
+        id: creds
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -n "$FIREBASE_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No FIREBASE_TOKEN secret; skipping deploy."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.creds.outputs.enabled == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.creds.outputs.enabled == 'true'
+        with:
+          node-version: 20
+          cache: npm
+      - if: steps.creds.outputs.enabled == 'true'
+        run: npm ci && npm run build
+      - if: steps.creds.outputs.enabled == 'true'
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: npx --yes firebase-tools@13 deploy --only hosting --project default --non-interactive
