@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Link } from 'react-router-dom';
 import { Feed } from './Feed';
 import { mockFetch, renderWithProviders } from '../../test/utils';
 import { makeFeed, makeStory } from '../../test/fixtures';
@@ -106,5 +107,38 @@ describe('Feed', () => {
         await act(async () => gates[`${API}/news?page=2`](makeFeed(30, 31)));
         await waitFor(() => expect(screen.getAllByText('Story 31')).not.toHaveLength(0));
         expect(screen.queryByText('Story 1')).not.toBeInTheDocument();
+    });
+
+    it('drops a response for a page the user already navigated away from', async () => {
+        const gates: Record<string, (body: unknown) => void> = {};
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                (input: RequestInfo | URL) =>
+                    new Promise<Response>((resolve) => {
+                        gates[String(input)] = (body) => resolve(new Response(JSON.stringify(body), { status: 200 }));
+                    })
+            )
+        );
+        renderWithProviders(
+            <>
+                <Feed feedType="news" />
+                <Link to="/news/3">go to page 3</Link>
+            </>,
+            { route: '/news/2', path: '/news/:page' }
+        );
+        await waitFor(() => expect(gates[`${API}/news?page=2`]).toBeDefined());
+
+        await userEvent.click(screen.getByRole('link', { name: 'go to page 3' }));
+        await waitFor(() => expect(gates[`${API}/news?page=3`]).toBeDefined());
+
+        await act(async () => gates[`${API}/news?page=2`](makeFeed(30, 31)));
+        expect(screen.getByText('Loading...')).toBeInTheDocument();
+        expect(screen.queryByText('Story 31')).not.toBeInTheDocument();
+
+        await act(async () => gates[`${API}/news?page=3`](makeFeed(30, 61)));
+        await waitFor(() => expect(screen.getAllByText('Story 61')).not.toHaveLength(0));
+        expect(screen.queryByText('Story 31')).not.toBeInTheDocument();
+        expect(document.querySelector('ol')).toHaveAttribute('start', '61');
     });
 });
