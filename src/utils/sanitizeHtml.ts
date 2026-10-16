@@ -1,6 +1,22 @@
-const ALLOWED_TAGS = new Set(['A', 'P', 'I', 'EM', 'B', 'STRONG', 'PRE', 'CODE', 'BR', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'SPAN']);
+const ALLOWED_TAGS = new Set([
+    'A',
+    'P',
+    'I',
+    'EM',
+    'B',
+    'STRONG',
+    'PRE',
+    'CODE',
+    'BR',
+    'UL',
+    'OL',
+    'LI',
+    'BLOCKQUOTE',
+    'SPAN',
+]);
 const ALLOWED_ATTRIBUTES: Record<string, string[]> = { A: ['href', 'rel', 'title'] };
-const SAFE_URL = /^(https?:|mailto:|\/|#)/i;
+// Single-slash local paths only: `//host` and `/\host` are protocol-relative external URLs.
+const SAFE_URL = /^(https?:|mailto:|\/(?![/\\])|#)/i;
 
 function cleanNode(node: Node, doc: Document): Node | null {
     if (node.nodeType === Node.TEXT_NODE) {

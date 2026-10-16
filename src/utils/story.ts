@@ -9,5 +9,5 @@ export function hasExternalUrl(item: Pick<Story, 'url'>): boolean {
 export function parsePositiveInt(value: string | undefined): number | null {
     if (!value || !/^\d+$/.test(value)) return null;
     const n = Number(value);
-    return n > 0 ? n : null;
+    return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
