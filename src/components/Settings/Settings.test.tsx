@@ -33,6 +33,36 @@ describe('Settings popup', () => {
         expect(screen.queryByRole('dialog')).toBeNull();
     });
 
+    it('returns focus to the cog when closed', async () => {
+        const user = userEvent.setup();
+        await openSettings();
+        await user.keyboard('{Escape}');
+        const cog = screen.getByRole('button', { name: 'Settings' });
+        expect(cog).toHaveFocus();
+        await user.keyboard('{Enter}');
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        await user.keyboard('{Enter}');
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(cog).toHaveFocus();
+    });
+
+    it('keeps Tab and Shift+Tab inside the dialog', async () => {
+        const user = userEvent.setup();
+        const dialog = await openSettings();
+        const close = screen.getByRole('button', { name: 'Close settings' });
+        const inputs = dialog.querySelectorAll('input');
+        const lastInput = inputs[inputs.length - 1];
+
+        await user.tab({ shift: true });
+        expect(lastInput).toHaveFocus();
+        await user.tab();
+        expect(close).toHaveFocus();
+        for (let i = 0; i < inputs.length + 2; i++) {
+            await user.tab();
+            expect(dialog.contains(document.activeElement)).toBe(true);
+        }
+    });
+
     it('× closes on click and Escape closes', async () => {
         const user = userEvent.setup();
         await openSettings();

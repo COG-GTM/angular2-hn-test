@@ -35,7 +35,7 @@ export function readOpenLinkInNewTab(): boolean {
     const raw = readItem(STORAGE_KEYS.openLinkInNewTab);
     if (!raw) return DEFAULT_SETTINGS.openLinkInNewTab;
     try {
-        return Boolean(JSON.parse(raw));
+        return JSON.parse(raw) === true;
     } catch {
         return DEFAULT_SETTINGS.openLinkInNewTab;
     }

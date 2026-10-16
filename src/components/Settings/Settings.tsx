@@ -9,14 +9,45 @@ const THEMES = [
     { value: 'amoledblack', label: 'Black (AMOLED)' },
 ];
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function trapFocus(event: KeyboardEvent, container: HTMLElement | null) {
+    if (!container) return;
+    const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    const inside = active instanceof Node && container.contains(active);
+    if (event.shiftKey && (!inside || active === first)) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && (!inside || active === last)) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
 export function Settings() {
     const { settings, toggleSettings, toggleOpenLinksInNewTab, setTheme, setFont, setSpacing } = useSettings();
     const closeRef = useRef<HTMLSpanElement>(null);
+    const popupRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         closeRef.current?.focus();
+        return () => {
+            if (opener?.isConnected) opener.focus();
+        };
+    }, []);
+
+    useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') toggleSettings();
+            if (event.key === 'Escape') {
+                toggleSettings();
+            } else if (event.key === 'Tab') {
+                trapFocus(event, popupRef.current);
+            }
         };
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
@@ -24,7 +55,7 @@ export function Settings() {
 
     return (
         <div id="popup1" className="overlay">
-            <div className="popup" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div className="popup" ref={popupRef} role="dialog" aria-modal="true" aria-labelledby="settings-title">
                 <h1 id="settings-title">Settings</h1>
                 <hr />
                 <span className="close" ref={closeRef} {...buttonProps(toggleSettings, 'Close settings')}>

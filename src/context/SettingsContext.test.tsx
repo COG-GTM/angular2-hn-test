@@ -85,7 +85,7 @@ describe('SettingsProvider (parity with SettingsService)', () => {
         expect(mediaListeners).toHaveLength(0);
     });
 
-    it.each(['not json', '{', 'undefined'])('falls back to false for a corrupt openLinkInNewTab (%s)', (raw) => {
+    it.each(['not json', '{', 'undefined', '"false"', '1', '{}'])('falls back to false for a corrupt or non-boolean openLinkInNewTab (%s)', (raw) => {
         localStorage.setItem('openLinkInNewTab', raw);
         const { current } = renderProvider();
         expect(current().settings.openLinkInNewTab).toBe(false);
