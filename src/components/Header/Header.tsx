@@ -1,14 +1,15 @@
 import { NavLink } from 'react-router-dom';
 import { useSettings } from '../../context/useSettings';
+import { buttonProps } from '../../utils/a11y';
 import { Settings } from '../Settings/Settings';
 import './Header.scss';
 
+function scrollTop() {
+    window.scrollTo(0, 0);
+}
+
 export function Header() {
     const { settings, toggleSettings } = useSettings();
-
-    const scrollTop = () => {
-        window.scrollTo(0, 0);
-    };
 
     return (
         <header>
@@ -31,7 +32,14 @@ export function Header() {
                     </div>
                 </div>
                 <div className="info">
-                    <img className="settings" src="/assets/images/cog.svg" alt="Settings" onClick={() => toggleSettings()} />
+                    <img
+                        className="settings"
+                        src="/assets/images/cog.svg"
+                        alt="Settings"
+                        aria-haspopup="dialog"
+                        aria-expanded={settings.showSettings}
+                        {...buttonProps(toggleSettings, 'Settings')}
+                    />
                 </div>
             </div>
             {settings.showSettings && <Settings />}

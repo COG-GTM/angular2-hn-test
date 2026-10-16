@@ -1,64 +1,63 @@
+import { useEffect, useRef } from 'react';
 import { useSettings } from '../../context/useSettings';
+import { buttonProps } from '../../utils/a11y';
 import './Settings.scss';
+
+const THEMES = [
+    { value: 'default', label: 'Default' },
+    { value: 'night', label: 'Night' },
+    { value: 'amoledblack', label: 'Black (AMOLED)' },
+];
 
 export function Settings() {
     const { settings, toggleSettings, toggleOpenLinksInNewTab, setTheme, setFont, setSpacing } = useSettings();
+    const closeRef = useRef<HTMLSpanElement>(null);
+
+    useEffect(() => {
+        closeRef.current?.focus();
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') toggleSettings();
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [toggleSettings]);
 
     return (
         <div id="popup1" className="overlay">
-            <div className="popup">
-                <h1>Settings</h1>
+            <div className="popup" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+                <h1 id="settings-title">Settings</h1>
                 <hr />
-                <span className="close" onClick={() => toggleSettings()}>&times;</span>
+                <span className="close" ref={closeRef} {...buttonProps(toggleSettings, 'Close settings')}>
+                    &times;
+                </span>
                 <div className="content">
                     <div className="control-section">
                         <h2>Links</h2>
                         <input
                             type="checkbox"
+                            aria-label="Open links in a new tab"
                             checked={settings.openLinkInNewTab}
-                            onChange={() => toggleOpenLinksInNewTab()}
-                        />
-                        {' '}Open links in a new tab
+                            onChange={toggleOpenLinksInNewTab}
+                        />{' '}
+                        Open links in a new tab
                     </div>
                     <div className="theme-controls">
                         <div className="control-section">
                             <h2>Select a theme</h2>
-                            <div>
-                                <label>
-                                    <input
-                                        name="theme"
-                                        type="radio"
-                                        value="default"
-                                        checked={settings.theme === 'default'}
-                                        onChange={() => setTheme('default')}
-                                    />
-                                    {' '}Default
-                                </label>
-                            </div>
-                            <div>
-                                <label>
-                                    <input
-                                        name="theme"
-                                        type="radio"
-                                        value="night"
-                                        checked={settings.theme === 'night'}
-                                        onChange={() => setTheme('night')}
-                                    />
-                                    {' '}Night
-                                </label>
-                            </div>
-                            <div>
-                                <label>
-                                    <input
-                                        name="theme"
-                                        type="radio"
-                                        value="amoledblack"
-                                        checked={settings.theme === 'amoledblack'}
-                                        onChange={() => setTheme('amoledblack')}
-                                    />
-                                    {' '}Black (AMOLED)
-                                </label>
-                            </div>
+                            {THEMES.map(({ value, label }) => (
+                                <div key={value}>
+                                    <label>
+                                        <input
+                                            name="theme"
+                                            type="radio"
+                                            value={value}
+                                            checked={settings.theme === value}
+                                            onChange={() => setTheme(value)}
+                                        />{' '}
+                                        {label}
+                                    </label>
+                                </div>
+                            ))}
                         </div>
                         <div className="control-section">
                             <h2>Change Font</h2>
