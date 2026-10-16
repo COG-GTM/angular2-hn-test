@@ -1,19 +1,23 @@
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../context/useSettings';
+import { buttonProps } from '../../utils/a11y';
 import './Settings.scss';
 
 export function Settings() {
     const { settings, toggleSettings, toggleOpenLinksInNewTab, setTheme, setFont, setSpacing } = useSettings();
 
     return (
-        <div id="popup1" className="overlay">
+        <div id="popup1" className="overlay" role="dialog" aria-modal="true" aria-label="Settings">
             <div className="popup">
                 <h1>Settings</h1>
                 <hr />
-                <span className="close" onClick={() => toggleSettings()}>&times;</span>
+                <span className="close" {...buttonProps(toggleSettings, 'Close settings')}>
+                    &times;
+                </span>
                 <div className="content">
                     <div className="control-section">
                         <h2>Links</h2>
                         <input
+                            aria-label="Open links in a new tab"
                             type="checkbox"
                             checked={settings.openLinkInNewTab}
                             onChange={() => toggleOpenLinksInNewTab()}

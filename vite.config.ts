@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -7,40 +8,41 @@ export default defineConfig({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
-            manifest: {
-                name: 'Angular 2 HN',
-                short_name: 'Angular 2 HN',
-                icons: [
+            // public/manifest.json (linked from index.html) is the single manifest, as in the Angular app.
+            manifest: false,
+            includeManifestIcons: false,
+            workbox: {
+                // ngsw-config.json "app" group (prefetch): index.html, favicon, JS, CSS and the manifest,
+                // plus the app-shell images so the header renders offline.
+                globPatterns: ['**/*.{js,css,html,ico}', 'manifest.json', 'assets/images/*.svg'],
+                navigateFallback: 'index.html',
+                runtimeCaching: [
                     {
-                        src: 'assets/icons/android-chrome-144x144.png',
-                        sizes: '144x144',
-                        type: 'image/png',
+                        // ngsw-config.json "assets" group (lazy): cache other static assets on first use.
+                        urlPattern: ({ sameOrigin, url }) => sameOrigin && url.pathname.startsWith('/assets/'),
+                        handler: 'CacheFirst',
+                        options: { cacheName: 'assets' },
                     },
                     {
-                        src: 'assets/icons/android-chrome-192x192.png',
-                        sizes: '192x192',
-                        type: 'image/png',
-                    },
-                    {
-                        src: 'assets/icons/android-chrome-256x256.png',
-                        sizes: '256x256',
-                        type: 'image/png',
-                    },
-                    {
-                        src: 'assets/icons/android-chrome-512x512.png',
-                        sizes: '512x512',
-                        type: 'image/png',
+                        // HN API: network first, fall back to the last cached response when offline
+                        // (the Angular app's Workbox networkFirst rule for node-hnapi).
+                        urlPattern: /^https:\/\/(node-hnapi\.herokuapp\.com|api\.hnpwa\.com)\/.*/,
+                        handler: 'NetworkFirst',
+                        options: {
+                            cacheName: 'hn-api',
+                            networkTimeoutSeconds: 10,
+                            expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                            cacheableResponse: { statuses: [0, 200] },
+                        },
                     },
                 ],
-                theme_color: '#b92b27',
-                background_color: '#ffffff',
-                display: 'standalone',
-                orientation: 'portrait',
-                start_url: './?utm_source=web_app_manifest',
-            },
-            workbox: {
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,gif,woff,woff2}'],
             },
         }),
     ],
+    test: {
+        environment: 'jsdom',
+        setupFiles: ['./src/test/setup.ts'],
+        css: false,
+        restoreMocks: true,
+    },
 });

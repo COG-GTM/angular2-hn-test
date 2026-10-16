@@ -1,112 +1,67 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { Settings } from '../models/settings';
+import { SettingsContext } from './useSettings';
 
-interface SettingsContextType {
-    settings: Settings;
-    toggleSettings: () => void;
-    toggleOpenLinksInNewTab: () => void;
-    setTheme: (theme: string) => void;
-    setFont: (fontSize: string) => void;
-    setSpacing: (listSpace: string) => void;
-}
+const DARK_SCHEME_QUERY = '(prefers-color-scheme: dark)';
 
-const SettingsContext = createContext<SettingsContextType | null>(null);
-
-export function useSettings(): SettingsContextType {
-    const ctx = useContext(SettingsContext);
-    if (!ctx) throw new Error('useSettings must be used within a SettingsProvider');
-    return ctx;
-}
-
-export function SettingsProvider({ children }: { children: ReactNode }) {
-    const [settings, setSettings] = useState<Settings>(() => ({
+function initialSettings(): Settings {
+    const openLinkInNewTab = localStorage.getItem('openLinkInNewTab');
+    return {
         showSettings: false,
-        openLinkInNewTab: localStorage.getItem('openLinkInNewTab')
-            ? JSON.parse(localStorage.getItem('openLinkInNewTab')!)
-            : false,
-        theme: 'default',
-        titleFontSize: localStorage.getItem('titleFontSize')
-            ? localStorage.getItem('titleFontSize')!
-            : '16',
-        listSpacing: localStorage.getItem('listSpacing')
-            ? localStorage.getItem('listSpacing')!
-            : '0',
-    }));
+        openLinkInNewTab: openLinkInNewTab ? JSON.parse(openLinkInNewTab) : false,
+        theme: localStorage.getItem('theme') || 'default',
+        titleFontSize: localStorage.getItem('titleFontSize') || '16',
+        listSpacing: localStorage.getItem('listSpacing') || '0',
+    };
+}
 
-    // Initialize theme
-    useEffect(() => {
-        const darkColorSchemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+/** React port of Angular's SettingsService: same defaults, localStorage keys and system theme sync. */
+export function SettingsProvider({ children }: { children: ReactNode }) {
+    const [settings, setSettings] = useState<Settings>(initialSettings);
 
-        const handleChange = (event: MediaQueryListEvent) => {
-            const theme = event.matches ? 'night' : 'default';
-            setSettings(prev => {
-                const next = { ...prev, theme };
-                localStorage.setItem('theme', theme);
-                return next;
-            });
-        };
-
-        darkColorSchemeMedia.addEventListener('change', handleChange);
-
-        // Init theme on mount
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            setSettings(prev => ({ ...prev, theme: savedTheme }));
-        } else {
-            // Dispatch to check current preference
-            if (darkColorSchemeMedia.matches) {
-                setSettings(prev => {
-                    const next = { ...prev, theme: 'night' };
-                    localStorage.setItem('theme', 'night');
-                    return next;
-                });
-            }
-        }
-
-        return () => {
-            darkColorSchemeMedia.removeEventListener('change', handleChange);
-        };
+    const setTheme = useCallback((theme: string) => {
+        localStorage.setItem('theme', theme);
+        setSettings((prev) => ({ ...prev, theme }));
     }, []);
 
+    useEffect(() => {
+        const darkColorSchemeMedia = window.matchMedia(DARK_SCHEME_QUERY);
+        const applySystemScheme = (matches: boolean) => setTheme(matches ? 'night' : 'default');
+        const handleChange = (event: MediaQueryListEvent) => applySystemScheme(event.matches);
+
+        darkColorSchemeMedia.addEventListener('change', handleChange);
+        if (!localStorage.getItem('theme')) {
+            applySystemScheme(darkColorSchemeMedia.matches);
+        }
+        return () => darkColorSchemeMedia.removeEventListener('change', handleChange);
+    }, [setTheme]);
+
     const toggleSettings = useCallback(() => {
-        setSettings(prev => ({ ...prev, showSettings: !prev.showSettings }));
+        setSettings((prev) => ({ ...prev, showSettings: !prev.showSettings }));
     }, []);
 
     const toggleOpenLinksInNewTab = useCallback(() => {
-        setSettings(prev => {
-            const next = { ...prev, openLinkInNewTab: !prev.openLinkInNewTab };
-            localStorage.setItem('openLinkInNewTab', JSON.stringify(next.openLinkInNewTab));
-            return next;
+        setSettings((prev) => {
+            const openLinkInNewTab = !prev.openLinkInNewTab;
+            localStorage.setItem('openLinkInNewTab', JSON.stringify(openLinkInNewTab));
+            return { ...prev, openLinkInNewTab };
         });
     }, []);
 
-    const setTheme = useCallback((theme: string) => {
-        setSettings(prev => {
-            const next = { ...prev, theme };
-            localStorage.setItem('theme', next.theme);
-            return next;
-        });
+    const setFont = useCallback((titleFontSize: string) => {
+        localStorage.setItem('titleFontSize', titleFontSize);
+        setSettings((prev) => ({ ...prev, titleFontSize }));
     }, []);
 
-    const setFont = useCallback((fontSize: string) => {
-        setSettings(prev => {
-            const next = { ...prev, titleFontSize: fontSize };
-            localStorage.setItem('titleFontSize', next.titleFontSize);
-            return next;
-        });
+    const setSpacing = useCallback((listSpacing: string) => {
+        localStorage.setItem('listSpacing', listSpacing);
+        setSettings((prev) => ({ ...prev, listSpacing }));
     }, []);
 
-    const setSpacing = useCallback((listSpace: string) => {
-        setSettings(prev => {
-            const next = { ...prev, listSpacing: listSpace };
-            localStorage.setItem('listSpacing', next.listSpacing);
-            return next;
-        });
-    }, []);
-
-    return (
-        <SettingsContext.Provider value={{ settings, toggleSettings, toggleOpenLinksInNewTab, setTheme, setFont, setSpacing }}>
-            {children}
-        </SettingsContext.Provider>
+    const value = useMemo(
+        () => ({ settings, toggleSettings, toggleOpenLinksInNewTab, setTheme, setFont, setSpacing }),
+        [settings, toggleSettings, toggleOpenLinksInNewTab, setTheme, setFont, setSpacing]
     );
+
+    return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

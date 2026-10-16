@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { useSettings } from '../../context/SettingsContext';
+import { useSettings } from '../../context/useSettings';
 import { Settings } from '../Settings/Settings';
+import { buttonProps } from '../../utils/a11y';
 import './Header.scss';
 
 export function Header() {
@@ -31,7 +32,13 @@ export function Header() {
                     </div>
                 </div>
                 <div className="info">
-                    <img className="settings" src="/assets/images/cog.svg" alt="Settings" onClick={() => toggleSettings()} />
+                    <img
+                        className="settings"
+                        src="/assets/images/cog.svg"
+                        alt="Settings"
+                        aria-expanded={settings.showSettings}
+                        {...buttonProps(toggleSettings)}
+                    />
                 </div>
             </div>
             {settings.showSettings && <Settings />}
