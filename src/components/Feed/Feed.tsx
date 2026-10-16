@@ -24,6 +24,12 @@ export function Feed({ feedType }: FeedProps) {
     );
     const listStart = ((pageNum ?? 1) - 1) * FEED_PAGE_SIZE + 1;
 
+    // Angular scrolled to the top once the page loaded; also do it when the page changes so the
+    // loader is visible instead of a blank screen when More/Back is used from the bottom.
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [feedType, page]);
+
     useEffect(() => {
         if (items) window.scrollTo(0, 0);
     }, [items]);

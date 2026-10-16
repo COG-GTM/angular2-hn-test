@@ -97,8 +97,10 @@ describe('Feed', () => {
         await act(async () => gates[`${API}/news?page=1`](makeFeed(30)));
         expect(await screen.findAllByText('Story 1')).not.toHaveLength(0);
 
+        vi.mocked(window.scrollTo).mockClear();
         await userEvent.click(screen.getByRole('link', { name: /More/ }));
         expect(screen.getByText('Loading...')).toBeInTheDocument();
+        expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
         expect(screen.queryByText('Story 1')).not.toBeInTheDocument();
 
         await act(async () => gates[`${API}/news?page=2`](makeFeed(30, 31)));
