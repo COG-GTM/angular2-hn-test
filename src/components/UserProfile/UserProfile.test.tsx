@@ -110,6 +110,38 @@ describe('UserProfile', () => {
         expect(container.querySelector('.main-details .name')).toHaveTextContent('b');
     });
 
+    it('shows the loader, not the earlier result, when returning to a previously loaded id', async () => {
+        let aCalls = 0;
+        let releaseSecondA: () => void = () => {};
+        const gate = new Promise<void>((resolve) => (releaseSecondA = resolve));
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (input: RequestInfo | URL) => {
+                if (String(input) === userUrl('b')) return new Promise<Response>(() => {});
+                aCalls += 1;
+                if (aCalls > 1) await gate;
+                return new Response(JSON.stringify(makeUser({ id: 'a', karma: aCalls === 1 ? 10 : 11 })), { status: 200 });
+            })
+        );
+        const { container } = renderWithProviders(
+            <>
+                <UserProfile />
+                <Link to="/user/a">go to a</Link>
+                <Link to="/user/b">go to b</Link>
+            </>,
+            { route: '/user/a', path: '/user/:id' }
+        );
+
+        expect(await screen.findByText('10 ★')).toBeInTheDocument();
+        await userEvent.click(screen.getByText('go to b'));
+        await userEvent.click(screen.getByText('go to a'));
+
+        expect(screen.queryByText('10 ★')).toBeNull();
+        expect(container.querySelector('.loader')).toBeInTheDocument();
+        releaseSecondA();
+        expect(await screen.findByText('11 ★')).toBeInTheDocument();
+    });
+
     it.each(['{Enter}', ' '])('back button goes back in history via keyboard (%s)', async (key) => {
         mockFetch(() => ({ body: makeUser() }));
         render(

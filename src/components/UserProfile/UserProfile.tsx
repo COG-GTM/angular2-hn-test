@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { fetchUser } from '../../services/hackerNewsApi';
 import { sanitizeHtml } from '../../utils/sanitizeHtml';
 import { useAsyncResource } from '../../utils/useAsyncResource';
@@ -10,7 +10,9 @@ import './UserProfile.scss';
 export function UserProfile() {
     const { id = '' } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { data: user, error } = useAsyncResource(`user/${id}`, id ? () => fetchUser(id) : null);
+    // Keyed per history entry so revisiting an id (a -> b -> a) shows the loader, not the earlier result.
+    const { key: visit } = useLocation();
+    const { data: user, error } = useAsyncResource(`user/${id}/${visit}`, id ? () => fetchUser(id) : null);
 
     const goBack = () => {
         navigate(-1);
