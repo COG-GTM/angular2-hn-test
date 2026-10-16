@@ -4,3 +4,4 @@ export type { User } from './user';
 export type { PollResult } from './poll-result';
 export type { Settings } from './settings';
 export type { FeedType, FeedName } from './feed-type';
+export { FEED_NAMES } from './feed-type';

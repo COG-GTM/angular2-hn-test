@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
-import { useSettings } from './context/SettingsContext';
+import { useSettings } from './context/useSettings';
 import { Header } from './components/Header/Header';
 import { Footer } from './components/Footer/Footer';
 import { Feed } from './components/Feed/Feed';

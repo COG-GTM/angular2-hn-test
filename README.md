@@ -76,11 +76,48 @@ More to come!
 
 Feel free to send me feedback on [twitter](https://twitter.com/hdjirdeh) or [file an issue](https://github.com/hdjirdeh/angular2-hn/issues/new)! Feature requests are always welcome.
 
+## Migration conventions (React port of `COG-GTM/angular2-hn`)
+
+Source of truth for behaviour is the Angular 9 app in [`COG-GTM/angular2-hn`](https://github.com/COG-GTM/angular2-hn) (`src/app`). Audit against it and fix gaps; don't rewrite working code.
+
+**Shared foundation (Session 0) — import, don't edit.** Need a change? Describe it under "Shared-file changes needed" in your PR instead.
+
+| Path | What |
+| --- | --- |
+| `src/App.tsx`, `src/main.tsx` | Route table mirroring `app.routes.ts`: `/` → `/news/1`, `/{news,newest,show,ask,jobs}/:page` → `<Feed feedType=…/>`, lazy `/item/:id`, lazy `/user/:id` |
+| `src/services/hackerNewsApi.ts` | `fetchFeed`, `fetchItemContent` (awaits poll options), `fetchPollContent`, `fetchUser` (HNPWA — node-hnapi 404s on `/user/*`). All reject with `ApiError` on non-2xx / non-JSON / `null` bodies |
+| `src/models/*` | `Story`, `Comment`, `User`, `PollResult`, `Settings`, `FeedName`, `FEED_NAMES` |
+| `src/utils/sanitizeHtml.ts` | Required for every `dangerouslySetInnerHTML` (Angular's `[innerHTML]` was sanitized) |
+| `src/utils/useAsyncResource.ts` | `useAsyncResource(key, load \| null)` → `{ data, error, loading }`; never shows a previous route's data, `load = null` = invalid param → error state |
+| `src/utils/story.ts`, `formatCommentCount.ts`, `a11y.ts` | `hasExternalUrl`, `parsePositiveInt` (route params), comment pipe, `buttonProps(onActivate, label)` for clickable spans/images |
+| `src/context/useSettings.ts` | `useSettings()` hook + `SettingsContextType` (signature is frozen; the provider lives in `SettingsContext.tsx`) |
+| `src/components/Loader`, `src/components/ErrorMessage` | Shared UI states |
+| `src/test/*`, `vitest.config.ts` | `renderWithProviders(ui, { route, path })`, `mockFetch(url => ({ body }))`, fixtures, matchMedia mock |
+| `package.json`, `package-lock.json` | All deps are pre-installed (Vitest, Testing Library, jsdom, Playwright, vite-plugin-pwa). Don't add deps or touch the lockfile |
+
+**Workstream ownership (each PR edits only its own paths):**
+
+| Workstream | Angular source | Owns |
+| --- | --- | --- |
+| Feed | `src/app/feeds/` | `src/components/Feed/**`, `src/components/Item/**` (feed list item) |
+| Item details + comments | `src/app/item-details/` | `src/components/ItemDetails/**`, `src/components/Comment/**` |
+| User profile | `src/app/user/` | `src/components/UserProfile/**` |
+| Settings / theme | `src/app/shared/services/settings.service.ts`, `src/app/core/{header,footer,settings}` | `src/context/SettingsContext.tsx` (+ new files in `src/context/`), `src/components/{Header,Footer,Settings}/**`, `src/shared/scss/_themes.scss`, `src/shared/scss/_theme_variables.scss` |
+| PWA + build | `ngsw-config.json`, `src/manifest.webmanifest`, `src/styles.scss`, `src/assets` | `vite.config.ts`, `index.html`, `public/**`, `src/styles.scss`, `src/App.scss`, `src/shared/scss/_media.scss`, `eslint.config.js`, `tsconfig*.json`, `e2e/**`, `playwright.config.ts`, hosting/CI config |
+
+**Conventions**
+- Functional components + hooks, named exports, 4-space indent, single quotes (Prettier config in `package.json`).
+- Component SCSS is global in React (Angular's was view-encapsulated): nest rules under the component's root class so they don't leak.
+- JSX drops the whitespace Angular templates kept between inline elements — add `{' '}` where the Angular output had a space.
+- Colocate tests as `*.test.tsx`. Before opening a PR: `npm run lint && npm test && npm run build`.
+
 ## Build process
 
  - Clone or download the repo
  - `npm install`
  - `npm run dev` to run the application with Vite dev server
+ - `npm test` to run the unit tests (Vitest)
+ - `npm run lint` / `npm run typecheck`
  - `npm run build` to kick off a production build (output in `dist/`)
  - `npm run preview` to preview the production build locally
 
