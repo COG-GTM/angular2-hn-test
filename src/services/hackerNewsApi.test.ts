@@ -28,6 +28,15 @@ describe('hackerNewsApi', () => {
         await expect(fetchUser('nobody')).rejects.toThrow(/invalid JSON/);
     });
 
+    it('rejects HTTP 200 error objects from node-hnapi', async () => {
+        mockFetch(() => ({ body: { error: 'Item 9876543210123 not found' } }));
+        await expect(fetchItemContent(9876543210123)).rejects.toMatchObject({
+            name: 'ApiError',
+            status: 404,
+            message: 'Item 9876543210123 not found',
+        });
+    });
+
     it('fetchUser uses HNPWA and encodes the id', async () => {
         const fetchMock = mockFetch((url) =>
             url === 'https://api.hnpwa.com/v0/user/a%2Fb.json'

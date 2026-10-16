@@ -39,6 +39,11 @@ async function fetchJson<T>(url: string): Promise<T> {
     if (data === null || data === undefined) {
         throw new ApiError(`Request to ${url} returned no data`, 404);
     }
+    // node-hnapi answers unknown items with HTTP 200 and `{"error": "Item … not found"}`.
+    const apiError = (data as { error?: unknown }).error;
+    if (!Array.isArray(data) && apiError !== undefined) {
+        throw new ApiError(typeof apiError === 'string' ? apiError : `Request to ${url} returned an error`, 404);
+    }
     return data;
 }
 
