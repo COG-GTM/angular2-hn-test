@@ -77,6 +77,11 @@ test('first visit: app shell, deep links and visited API responses work offline'
     // Pages never visited online have nothing cached and show the error state instead of hanging.
     await page.goto('/newest/1');
     await expect(page.getByText(`${story.title} (newest)`)).toHaveCount(0);
+
+    // Route params containing a dot are app routes, not static files: they still get the app shell.
+    const dottedUser = await page.goto('/user/some.name');
+    expect(dottedUser?.fromServiceWorker()).toBe(true);
+    await expect(page.locator('a.home-link')).toBeVisible();
 });
 
 test('serves a single installable web app manifest', async ({ page }) => {

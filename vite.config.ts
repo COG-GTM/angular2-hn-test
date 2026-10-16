@@ -46,8 +46,12 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,html}', 'favicon.ico', 'assets/images/*.svg'],
                 globIgnores: ['ngsw-worker.js'],
                 navigateFallback: 'index.html',
-                // Firebase reserved URLs and file requests must not get the app shell.
-                navigateFallbackDenylist: [/^\/__\//, /\/[^/?]+\.[^/]+$/],
+                // Firebase reserved URLs and static files must not get the app shell. Match known file
+                // extensions only, so routes like /user/some.name still fall back to the shell.
+                navigateFallbackDenylist: [
+                    /^\/__\//,
+                    /\.(?:js|mjs|css|map|json|webmanifest|xml|txt|html?|ico|png|jpe?g|gif|svg|webp|woff2?|ttf|otf|eot)$/,
+                ],
                 cleanupOutdatedCaches: true,
                 skipWaiting: true,
                 clientsClaim: true,

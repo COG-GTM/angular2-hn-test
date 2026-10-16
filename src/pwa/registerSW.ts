@@ -7,23 +7,40 @@ export const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 export const IN_FLIGHT_WINDOW_MS = 60 * 1000;
 
 type Logger = Pick<Console, 'info' | 'error'>;
+type IsCached = (url: string) => Promise<boolean>;
+
+const isInCacheStorage: IsCached = (url) =>
+    typeof caches === 'undefined'
+        ? Promise.resolve(false)
+        : caches.match(url).then(
+              (response) => response !== undefined,
+              () => false
+          );
 
 export function warmRuntimeCache(
     entries: PerformanceEntryList,
     fetchFn: typeof fetch = fetch,
-    warmed = new Set<string>()
+    warmed = new Set<string>(),
+    isCached: IsCached = isInCacheStorage
 ) {
     const urls = [...new Set(entries.map((entry) => entry.name))].filter(
         (url) => isRuntimeCachedUrl(url, location.origin) && !warmed.has(url)
     );
     urls.forEach((url) => warmed.add(url));
-    return Promise.allSettled(urls.map((url) => fetchFn(url)));
+    return Promise.allSettled(
+        urls.map(async (url) => {
+            if (!(await isCached(url))) {
+                await fetchFn(url);
+            }
+        })
+    );
 }
 
-// First visit: the API/asset requests start before the new SW controls the page, so they never
-// reach its runtime caches and the landing page fails offline. Once the SW takes control,
-// request them again through it, including the ones still in flight at that moment.
-export function warmRuntimeCacheOnFirstControl(fetchFn: typeof fetch = fetch) {
+// When a new SW takes control (first visit, or upgrade from an older SW without the runtime
+// routes), the page's API/asset requests already went past it, so they are missing from its
+// runtime caches and the page fails offline. Request them again through the new SW, including
+// the ones still in flight at that moment, unless they are already cached.
+export function warmRuntimeCacheOnControl(fetchFn: typeof fetch = fetch, isCached: IsCached = isInCacheStorage) {
     navigator.serviceWorker.addEventListener(
         'controllerchange',
         () => {
@@ -32,12 +49,17 @@ export function warmRuntimeCacheOnFirstControl(fetchFn: typeof fetch = fetch) {
             const startedBeforeControl = (entries: PerformanceEntryList) =>
                 entries.filter((entry) => entry.startTime < controlledAt);
 
-            void warmRuntimeCache(startedBeforeControl(performance.getEntriesByType('resource')), fetchFn, warmed);
+            void warmRuntimeCache(
+                startedBeforeControl(performance.getEntriesByType('resource')),
+                fetchFn,
+                warmed,
+                isCached
+            );
             if (typeof PerformanceObserver === 'undefined') {
                 return;
             }
             const observer = new PerformanceObserver(
-                (list) => void warmRuntimeCache(startedBeforeControl(list.getEntries()), fetchFn, warmed)
+                (list) => void warmRuntimeCache(startedBeforeControl(list.getEntries()), fetchFn, warmed, isCached)
             );
             observer.observe({ type: 'resource' });
             setTimeout(() => observer.disconnect(), IN_FLIGHT_WINDOW_MS);
@@ -54,9 +76,7 @@ export function registerServiceWorker(
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
         return undefined;
     }
-    if (!navigator.serviceWorker.controller) {
-        warmRuntimeCacheOnFirstControl();
-    }
+    warmRuntimeCacheOnControl();
     return register({
         immediate: true,
         onRegisteredSW(_swUrl, registration) {

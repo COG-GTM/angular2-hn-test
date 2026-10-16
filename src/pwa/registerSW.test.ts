@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RegisterSWOptions } from 'vite-plugin-pwa/types';
-import { registerServiceWorker, warmRuntimeCache, warmRuntimeCacheOnFirstControl } from './registerSW';
+import { registerServiceWorker, warmRuntimeCache, warmRuntimeCacheOnControl } from './registerSW';
 
 const API = 'https://node-hnapi.herokuapp.com/news?page=1';
 const entry = (name: string, startTime = 0) => ({ name, startTime }) as PerformanceEntry;
@@ -43,13 +43,20 @@ describe('warmRuntimeCache', () => {
         ]);
     });
 
+    it('skips URLs that are already in the runtime cache', async () => {
+        const fetchFn = vi.fn<typeof fetch>(async () => new Response('[]'));
+        const user = 'https://api.hnpwa.com/v0/user/pg.json';
+        await warmRuntimeCache([entry(API), entry(user)], fetchFn, new Set(), async (url) => url === API);
+        expect(fetchFn.mock.calls.map(([url]) => url)).toEqual([user]);
+    });
+
     it('does not reject when a request fails', async () => {
         const fetchFn = vi.fn<typeof fetch>(async () => Promise.reject(new Error('offline')));
         await expect(warmRuntimeCache([entry(API)], fetchFn)).resolves.toHaveLength(1);
     });
 });
 
-describe('warmRuntimeCacheOnFirstControl', () => {
+describe('warmRuntimeCacheOnControl', () => {
     beforeEach(() => {
         vi.stubGlobal('PerformanceObserver', undefined);
     });
@@ -63,16 +70,29 @@ describe('warmRuntimeCacheOnFirstControl', () => {
         ]);
         const fetchFn = vi.fn<typeof fetch>(async () => new Response('[]'));
 
-        warmRuntimeCacheOnFirstControl(fetchFn);
+        warmRuntimeCacheOnControl(fetchFn, async () => false);
         expect(fetchFn).not.toHaveBeenCalled();
         sw.dispatchEvent(new Event('controllerchange'));
         sw.dispatchEvent(new Event('controllerchange'));
 
+        await vi.waitFor(() => expect(fetchFn).toHaveBeenCalled());
         expect(fetchFn.mock.calls.map(([url]) => url)).toEqual([API]);
     });
 });
 
 describe('registerServiceWorker', () => {
+    it('warms the runtime cache when a new SW replaces an existing controller', async () => {
+        vi.stubGlobal('PerformanceObserver', undefined);
+        vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => new Response('[]')));
+        const sw = stubServiceWorker({});
+        vi.spyOn(performance, 'getEntriesByType').mockReturnValue([entry(API, 0)]);
+
+        registerServiceWorker(vi.fn(() => async () => undefined));
+        sw.dispatchEvent(new Event('controllerchange'));
+
+        await vi.waitFor(() => expect(fetch).toHaveBeenCalledWith(API));
+    });
+
     it('does nothing without service worker support', () => {
         const register = vi.fn();
         expect(registerServiceWorker(register)).toBeUndefined();
